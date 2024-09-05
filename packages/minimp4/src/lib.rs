@@ -4,7 +4,6 @@ pub mod enc;
 mod writer;
 
 use std::{
-    convert::TryInto,
     ffi::CString,
     io::{Seek, SeekFrom, Write},
     mem::size_of,
@@ -17,9 +16,9 @@ use c::{mp4_h26x_write_init, mp4_h26x_writer_t, MP4E_close, MP4E_mux_t, MP4E_ope
 #[cfg(feature = "aac")]
 use enc::{BitRate, EncoderParams};
 use libc::malloc;
-use writer::write_mp4;
 #[cfg(feature = "aac")]
 use writer::write_mp4_with_audio;
+use writer::{write_mp4, TimestampSource};
 
 pub struct Mp4Muxer<W> {
     writer: W,
@@ -85,8 +84,14 @@ impl<W: Write + Seek> Mp4Muxer<W> {
 
     pub fn write_video_with_fps(&self, data: &[u8], fps: u32) {
         let mp4wr = unsafe { self.muxer_writer.as_mut().unwrap() };
-        let fps = fps.try_into().unwrap();
-        write_mp4(mp4wr, fps, data);
+        let timestamp_source = TimestampSource::Fps(fps);
+        write_mp4(mp4wr, timestamp_source, data);
+    }
+
+    pub fn write_video_with_duration(&self, data: &[u8], duration: std::time::Duration) {
+        let mp4wr = unsafe { self.muxer_writer.as_mut().unwrap() };
+        let timestamp_source = TimestampSource::Duration(duration);
+        write_mp4(mp4wr, timestamp_source, data);
     }
 
     pub fn write_comment(&mut self, comment: &str) {
