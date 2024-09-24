@@ -12,7 +12,9 @@ use std::{
     slice::from_raw_parts,
 };
 
-use c::{mp4_h26x_write_init, mp4_h26x_writer_t, MP4E_close, MP4E_mux_t, MP4E_open, MP4E_set_text_comment};
+use c::{
+    int64_t, mp4_h26x_write_init, mp4_h26x_writer_t, size_t, MP4E_close, MP4E_mux_t, MP4E_open, MP4E_set_text_comment,
+};
 #[cfg(feature = "aac")]
 use enc::{BitRate, EncoderParams};
 use libc::malloc;
@@ -112,11 +114,11 @@ impl<W: Write + Seek> Mp4Muxer<W> {
         self.writer.write(buf).unwrap_or(0) as u64
     }
 
-    extern "C" fn write(offset: i64, buffer: *const c_void, size: u64, token: *mut c_void) -> i32 {
+    extern "C" fn write(offset: int64_t, buffer: *const c_void, size: size_t, token: *mut c_void) -> i32 {
         let p_self = token as *mut Self;
         unsafe {
             let buf = from_raw_parts(buffer as *const u8, size as usize);
-            ((*p_self).write_data(offset, buf) != size) as i32
+            ((*p_self).write_data(offset.into(), buf) != size.into()) as i32
         }
     }
 }
