@@ -20,7 +20,6 @@ pub mod types {
     #[allow(non_camel_case_types)]
     pub type c_void = libc::c_void;
 }
-use libc::fprintf;
 use types::*;
 
 #[allow(non_camel_case_types)]
@@ -57,13 +56,11 @@ unsafe extern "C" fn minimp4_memset(s: *mut c_void, c: c_int, n: size_t) -> *mut
 }
 
 #[no_mangle]
-unsafe extern "C" fn __assert_fail(s: *mut c_void, c: c_int, n: size_t) -> *mut c_void {
-    fprintf(
-        libc::STDERR_FILENO as *mut libc::FILE,
-        b"assertion \"%s\" failed: file \"%s\", line %d\n\0".as_ptr() as *const c_char,
-        s,
-        c,
-        n,
-    );
-    libc::abort()
+unsafe extern "C" fn __assert_fail(s: *mut c_void, c: c_int, n: size_t) -> ! {
+    let message = std::ffi::CStr::from_ptr(s as *const c_char).to_string_lossy();
+    let filename = std::ffi::CStr::from_ptr(c as *const c_char).to_string_lossy();
+
+    eprintln!("assertion \"{}\" failed: file \"{}\", line {}", message, filename, n);
+
+    std::process::abort()
 }
